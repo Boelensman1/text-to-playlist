@@ -20,15 +20,7 @@ Length in minutes:seconds
 whiteline
 ```
 
-For example:
-```
-Shoot to Thrill
-AC/DC
-Back in Black
-5:18
-```
-
-The last line of whitespace is significant. Every entry should have 4 lines.
+The last line is significant. Every entry should have 4 lines.
 
 ## Usage
 ```
