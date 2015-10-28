@@ -304,6 +304,8 @@ def main(argv=None):
         print "\n"
         print "------OUTPUT------"
         print output
+        return 0
+
     with open(output_filename, 'w') as file_:
         file_.write(output)
 
