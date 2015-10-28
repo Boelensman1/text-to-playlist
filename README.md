@@ -12,24 +12,38 @@ If your music library is organized in a different way (but somewhat close) it sh
 
 ## Formatting of the .txt file
 The text must be formatted in the following way:
+```
 Songname
 Artist
 Album
 Length in minutes:seconds
 whiteline
+```
 
 For example:
+```
 Shoot to Thrill
 AC/DC
 Back in Black
 5:18
+```
 
 The last line of whitespace is significant. Every entry should have 4 lines.
 
 ## Usage
+```
 create_playlist.py [options]
 -i --input    the input text file
 -l --library  the library with the music files (required)
 -o --output   the output m3u (optional, if omitted will
               print to console)
 --help        shows this message
+```
+
+## Example
+An example playlist has been added if you want to test the script, it can be found under example-files. Don't judge me on the choice of music, I have not made nor listened to it.
+
+To convert this playlist you would use the following command:
+```
+./create_playlist.py -i ./example-files/playlist.txt -l /Volumes/Music -o playlist.m3u
+```
