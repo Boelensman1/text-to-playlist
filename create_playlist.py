@@ -31,7 +31,7 @@ import glob
 import getopt
 import re
 from difflib import SequenceMatcher
-from colors import red
+from colors import red, yellow
 
 
 def usage():
@@ -61,7 +61,7 @@ def glob_extentions(loc, *extentions):
 
 def abort():
     """Something went horribly wrong, abort everything"""
-    print "Aborting"
+    print red("Aborting!")
     sys.exit(1)
 
 
@@ -86,15 +86,15 @@ def print_options(options, add_abort=False):
 def get_from_multiplechoice(options, message_when_failing):
     """Show the options and let the user choose"""
     if len(options) is 0:
-        print message_when_failing
+        print yellow(message_when_failing)
         abort()
     if len(options) is 1:
         # check how certain we are
         if options[0]['similarity'] > 0.9:
             return options[0]['dirname']
         # no good enough match found, show the failing message
-        print message_when_failing
         print ""  # create some space
+        print yellow(message_when_failing)
         print "Is the following name correct?"
         print_options(options)
         answer = raw_input("Y/n/a: ")
@@ -108,7 +108,7 @@ def get_from_multiplechoice(options, message_when_failing):
 
     # multiple possible options, display the message and give the options
     print ""  # create some space
-    print message_when_failing
+    print yellow(message_when_failing)
     print "Choose one of the following:"
     # sort the options
     options = sorted(options, key=lambda k: k['similarity'], reverse=True)
@@ -129,7 +129,6 @@ def get_from_multiplechoice(options, message_when_failing):
         else:
             print 'Answer out of bounds'
             return get_from_multiplechoice(options, message_when_failing)
-            print ""
 
 
 def get_artist_dir(artist, artists, artist_dirs):
