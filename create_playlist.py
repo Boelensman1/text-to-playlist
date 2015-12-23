@@ -31,6 +31,7 @@ import glob
 import getopt
 import re
 from difflib import SequenceMatcher
+from colors import red
 
 
 def usage():
@@ -88,6 +89,7 @@ def get_from_multiplechoice(options, message_when_failing):
             return options[0]['dirname']
         # no good enough match found, show the failing message
         print message_when_failing
+        print ""  # create some space
         print "Is the following name correct?"
         print_options(options)
         answer = raw_input("Y/n: ")
@@ -97,9 +99,11 @@ def get_from_multiplechoice(options, message_when_failing):
             print "Aborting"
             sys.exit(1)
         # no option chosen, lets retry
+        print red("No valid answer given")
         return get_from_multiplechoice(options, message_when_failing)
 
     # multiple possible options, display the message and give the options
+    print ""  # create some space
     print message_when_failing
     print "Choose one of the following:"
     # sort the options
@@ -113,13 +117,14 @@ def get_from_multiplechoice(options, message_when_failing):
         if not answer:
             answer = 1  # the default
         if not str(answer).isdigit():
-            print "answer not recognized"
+            print red("Answer not recognized")
             return get_from_multiplechoice(options, message_when_failing)
 
         answer = int(answer)
         if len(options) > answer-1:
             return options[0]['dirname']
         else:
+            print ""
             print 'Answer out of bounds'
             return get_from_multiplechoice(options, message_when_failing)
 
