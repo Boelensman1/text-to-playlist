@@ -110,9 +110,9 @@ def get_from_multiplechoice(options, message_when_failing):
         print "Aborting"
         sys.exit(1)
     else:
-        if answer is "":
-            answer = "1"  # the default
-        if not answer.isdigit():
+        if not answer:
+            answer = 1  # the default
+        if not str(answer).isdigit():
             print "answer not recognized"
             return get_from_multiplechoice(options, message_when_failing)
 
