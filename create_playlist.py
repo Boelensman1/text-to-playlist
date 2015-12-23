@@ -314,6 +314,10 @@ def main(argv=None):
         usage()
         return 3
 
+    if not os.path.isdir(library):
+        print "library is not found"
+        usage()
+        return 3
 
     return create_playlist(input_filename, output_filename, library)
 
