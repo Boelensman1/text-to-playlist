@@ -59,6 +59,12 @@ def glob_extentions(loc, *extentions):
     return res
 
 
+def abort():
+    """Something went horribly wrong, abort everything"""
+    print "Aborting"
+    sys.exit(1)
+
+
 def similar(wanted, to_check):
     """check how similar two files are"""
     return SequenceMatcher(None, wanted, to_check).ratio()
@@ -81,8 +87,7 @@ def get_from_multiplechoice(options, message_when_failing):
     """Show the options and let the user choose"""
     if len(options) is 0:
         print message_when_failing
-        print "Aborting"
-        sys.exit(1)
+        abort()
     if len(options) is 1:
         # check how certain we are
         if options[0]['similarity'] > 0.9:
@@ -92,12 +97,11 @@ def get_from_multiplechoice(options, message_when_failing):
         print ""  # create some space
         print "Is the following name correct?"
         print_options(options)
-        answer = raw_input("Y/n: ")
+        answer = raw_input("Y/n/a: ")
         if answer == "" or answer.lower() == "y":
             return options[0]['dirname']
-        if answer.lower() == "n":
-            print "Aborting"
-            sys.exit(1)
+        if answer.lower() == "n" or answer.lower() == "a":
+            abort()
         # no option chosen, lets retry
         print red("No valid answer given")
         return get_from_multiplechoice(options, message_when_failing)
@@ -111,8 +115,7 @@ def get_from_multiplechoice(options, message_when_failing):
     print_options(options, True)
     answer = raw_input("Enter a number or press enter for the default (1): ")
     if answer.lower() == "a":
-        print "Aborting"
-        sys.exit(1)
+        abort()
     else:
         if not answer:
             answer = 1  # the default
@@ -124,9 +127,9 @@ def get_from_multiplechoice(options, message_when_failing):
         if len(options) > answer-1:
             return options[0]['dirname']
         else:
-            print ""
             print 'Answer out of bounds'
             return get_from_multiplechoice(options, message_when_failing)
+            print ""
 
 
 def get_artist_dir(artist, artists, artist_dirs):
