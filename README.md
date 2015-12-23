@@ -22,6 +22,13 @@ whiteline
 
 The last line is significant. Every entry should have 4 lines.
 
+## Installing dependencies
+Text-to-playlist has one dependency that you will have to install
+
+```
+pip install ansicolors
+```
+
 ## Usage
 ```
 create_playlist.py [options]

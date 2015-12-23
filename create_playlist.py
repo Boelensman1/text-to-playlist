@@ -31,6 +31,7 @@ import glob
 import getopt
 import re
 from difflib import SequenceMatcher
+from colors import red, yellow
 
 
 def usage():
@@ -58,6 +59,12 @@ def glob_extentions(loc, *extentions):
     return res
 
 
+def abort():
+    """Something went horribly wrong, abort everything"""
+    print red("Aborting!")
+    sys.exit(1)
+
+
 def similar(wanted, to_check):
     """check how similar two files are"""
     return SequenceMatcher(None, wanted, to_check).ratio()
@@ -79,41 +86,41 @@ def print_options(options, add_abort=False):
 def get_from_multiplechoice(options, message_when_failing):
     """Show the options and let the user choose"""
     if len(options) is 0:
-        print message_when_failing
-        print "Aborting"
-        sys.exit(1)
+        print yellow(message_when_failing)
+        abort()
     if len(options) is 1:
         # check how certain we are
         if options[0]['similarity'] > 0.9:
             return options[0]['dirname']
         # no good enough match found, show the failing message
-        print message_when_failing
+        print ""  # create some space
+        print yellow(message_when_failing)
         print "Is the following name correct?"
         print_options(options)
-        answer = raw_input("Y/n: ")
+        answer = raw_input("Y/n/a: ")
         if answer == "" or answer.lower() == "y":
             return options[0]['dirname']
-        if answer.lower() == "n":
-            print "Aborting"
-            sys.exit(1)
+        if answer.lower() == "n" or answer.lower() == "a":
+            abort()
         # no option chosen, lets retry
+        print red("No valid answer given")
         return get_from_multiplechoice(options, message_when_failing)
 
     # multiple possible options, display the message and give the options
-    print message_when_failing
+    print ""  # create some space
+    print yellow(message_when_failing)
     print "Choose one of the following:"
     # sort the options
     options = sorted(options, key=lambda k: k['similarity'], reverse=True)
     print_options(options, True)
     answer = raw_input("Enter a number or press enter for the default (1): ")
     if answer.lower() == "a":
-        print "Aborting"
-        sys.exit(1)
+        abort()
     else:
-        if answer is "":
-            answer = "1"  # the default
-        if not answer.isdigit():
-            print "answer not recognized"
+        if not answer:
+            answer = 1  # the default
+        if not str(answer).isdigit():
+            print red("Answer not recognized")
             return get_from_multiplechoice(options, message_when_failing)
 
         answer = int(answer)
@@ -248,8 +255,30 @@ def process_content(content, library):
     return output
 
 
+def create_playlist(input_filename, output_filename, library):
+    """The function that actually creates the playlist"""
+    # start by reading the file
+    with open(input_filename) as file_handle:
+        content = file_handle.readlines()
+
+    # now process the file
+    output = process_content(content, library)
+
+    # write the output to a file
+    if output_filename is None:
+        print "\n"
+        print "------OUTPUT------"
+        print output
+        return 0
+
+    with open(output_filename, 'w') as file_:
+        file_.write(output)
+
+    return 1
+
+
 def main(argv=None):
-    """the main function that does all the work"""
+    """the main function that handles the arguments"""
     if argv is None:
         argv = sys.argv
 
@@ -292,22 +321,12 @@ def main(argv=None):
         usage()
         return 3
 
-    # start by reading the file
-    with open(input_filename) as file_handle:
-        content = file_handle.readlines()
+    if not os.path.isdir(library):
+        print "library is not found"
+        usage()
+        return 3
 
-    # now process the file
-    output = process_content(content, library)
-
-    # write the output to a file
-    if output_filename is None:
-        print "\n"
-        print "------OUTPUT------"
-        print output
-        return 0
-
-    with open(output_filename, 'w') as file_:
-        file_.write(output)
+    return create_playlist(input_filename, output_filename, library)
 
 
 if __name__ == "__main__":
