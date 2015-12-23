@@ -31,7 +31,7 @@ import glob
 import getopt
 import re
 from difflib import SequenceMatcher
-from colors import red, yellow
+from colors import red, yellow, blue, magenta
 
 
 def usage():
@@ -99,6 +99,7 @@ def get_from_multiplechoice(options, message_when_failing):
         print_options(options)
         answer = raw_input("Y/n/a: ")
         if answer == "" or answer.lower() == "y":
+            print magenta("Option " + options[0]['dirname'] + " chosen")
             return options[0]['dirname']
         if answer.lower() == "n" or answer.lower() == "a":
             abort()
@@ -125,6 +126,7 @@ def get_from_multiplechoice(options, message_when_failing):
 
         answer = int(answer)
         if len(options) > answer-1:
+            print magenta("Option " + options[0]['dirname'] + " chosen")
             return options[0]['dirname']
         else:
             print 'Answer out of bounds'
@@ -266,10 +268,12 @@ def create_playlist(input_filename, output_filename, library):
 
     # write the output to a file
     if output_filename is None:
-        print "\n"
-        print "------OUTPUT------"
+        # two blank lines
+        print ""
+        print ""
+        print blue("Output:")
         print output
-        return 0
+        return 1
 
     with open(output_filename, 'w') as file_:
         file_.write(output)
