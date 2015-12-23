@@ -248,8 +248,30 @@ def process_content(content, library):
     return output
 
 
+def create_playlist(input_filename, output_filename, library):
+    """The function that actually creates the playlist"""
+    # start by reading the file
+    with open(input_filename) as file_handle:
+        content = file_handle.readlines()
+
+    # now process the file
+    output = process_content(content, library)
+
+    # write the output to a file
+    if output_filename is None:
+        print "\n"
+        print "------OUTPUT------"
+        print output
+        return 0
+
+    with open(output_filename, 'w') as file_:
+        file_.write(output)
+
+    return 1
+
+
 def main(argv=None):
-    """the main function that does all the work"""
+    """the main function that handles the arguments"""
     if argv is None:
         argv = sys.argv
 
@@ -292,22 +314,8 @@ def main(argv=None):
         usage()
         return 3
 
-    # start by reading the file
-    with open(input_filename) as file_handle:
-        content = file_handle.readlines()
 
-    # now process the file
-    output = process_content(content, library)
-
-    # write the output to a file
-    if output_filename is None:
-        print "\n"
-        print "------OUTPUT------"
-        print output
-        return 0
-
-    with open(output_filename, 'w') as file_:
-        file_.write(output)
+    return create_playlist(input_filename, output_filename, library)
 
 
 if __name__ == "__main__":
