@@ -54,7 +54,10 @@ class ParsePlexHTML(HTMLParser):
 
     def handle_data(self, data):
         if self.next_data_is:
-            self.subresult[self.next_data_is] = data
+            if self.next_data_is in self.subresult:
+                self.subresult[self.next_data_is] += data
+            else:
+                self.subresult[self.next_data_is] = data
             if len(self.subresult) is 4:
                 # got all data!
                 self.result.append(self.subresult)
