@@ -8,7 +8,7 @@ While doing this the script will ask you a question when it is not sure of somet
 ## Formatting of your library file
 For the script to work your library should be organized in the following way: Artist / Album / Song.
 
-If your music library is organized in a different way (but somewhat close) it should not be too difficult to change the script, the applicable lines are 150 and 175.
+If your music library is organized in a different way (but somewhat close) it should not be too difficult to change the script, the applicable functions are get_artist_dir and get_album_dir.
 
 ## Formatting of the .txt file
 The text must be formatted in the following way:
