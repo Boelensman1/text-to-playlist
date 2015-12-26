@@ -77,6 +77,8 @@ def plext_to_txt(input_filename, output_filename):
             file_handle.write(data['album'] + '\n')
             file_handle.write(data['duration'] + '\n')
             file_handle.write('\n')
+
+    print 'File', '"'+output_filename+'"', 'written!'
     return 1
 
 
@@ -126,7 +128,11 @@ def main(argv=None):
         output_filename = root + '.txt'
 
     if os.path.isfile(output_filename):
-        print 'File exists!'
+        print 'File', '"'+output_filename+'"', 'exists, overwrite?'
+        answer = raw_input("Y/n ")
+        if answer != '' and answer.lower() != 'y':
+            print 'Aborting!'
+            return 0
 
     return plext_to_txt(input_filename, output_filename)
 
