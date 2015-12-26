@@ -40,7 +40,7 @@ def usage():
     print '-i --input    the input text file'
     print '-l --library  the library with the music files (required)'
     print "-o --output   the output m3u (optional, if omitted will"
-    print "              print to console)"
+    print "              default to inputfilename+.m3u)"
     print '--help        shows this message'
 
 
@@ -267,14 +267,6 @@ def create_playlist(input_filename, output_filename, library):
     output = process_content(content, library)
 
     # write the output to a file
-    if output_filename is None:
-        # two blank lines
-        print ""
-        print ""
-        print blue("Output:")
-        print output
-        return 1
-
     with open(output_filename, 'w') as file_:
         file_.write(output)
 
@@ -329,6 +321,17 @@ def main(argv=None):
         print "library is not found"
         usage()
         return 3
+
+    if output_filename is None:
+        root = os.path.basename(input_filename)
+        output_filename = root + '.m3u'
+
+    if os.path.isfile(output_filename):
+        print 'File', '"'+output_filename+'"', 'exists, overwrite?'
+        answer = raw_input("Y/n ")
+        if answer != '' and answer.lower() != 'y':
+            print 'Aborting!'
+            return 0
 
     return create_playlist(input_filename, output_filename, library)
 

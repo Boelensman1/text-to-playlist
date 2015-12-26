@@ -35,7 +35,7 @@ create_playlist.py [options]
 -i --input    the input text file
 -l --library  the library with the music files (required)
 -o --output   the output m3u (optional, if omitted will
-              print to console)
+              default to inputfilename+.m3u)
 --help        shows this message
 ```
 
