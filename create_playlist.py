@@ -208,7 +208,7 @@ def get_artist_dir(search_string, artists, artist_dirs, song):
 def get_album_dir(search_string, albums, song, location):
     """Get the name of the directory of the album"""
 
-    artist = song['album']
+    artist = song['artist']
     album = song['album']
 
     options = []
@@ -231,8 +231,6 @@ def get_album_dir(search_string, albums, song, location):
     message += 'Searched in: ' + location
     if search_string != album:
         message += "\n"+'Searched for ' + search_string
-
-    print artist
 
     result = get_from_question(options, message)
     # check if found
@@ -272,7 +270,6 @@ def get_song_path(search_string, song, location):
     if search_string != song_name:
         message += "\n"+'Searched for ' + search_string
 
-    filename = get_from_question(options, message)
     result = get_from_question(options, message)
     # check if found
     if result[0] is True:
@@ -312,17 +309,19 @@ def process_content(content, library):
     artist_dirs = next(os.walk(library))[1]
 
     for song in songs:
+        print song
         artists = get_artist_dir(song['artist'], artists, artist_dirs, song)
         artist_dir = artists[song['artist']]
 
         # we found the artist folder, now lets look for the album
         location = library + '/' + artist_dir
         albums = get_album_dir(song['album'], albums, song, location)
-        album_dir = albums[artist_dir][song['album']]
+        album_dir = albums[song['artist']][song['album']]
 
         # we found the album folder, now lets look for the song
-        location = location + "/" + artist_dir + "/" + album_dir + "/"
+        location = location + "/" + album_dir + "/"
         song_path = get_song_path(song['name'], song, location)
+        print song_path
 
         # ok, now do the output, start with the info
         output += "#EXTINF:" + song['duration'] + ","
