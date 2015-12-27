@@ -83,31 +83,54 @@ def print_options(options, add_abort=False):
         print "A) Abort"
 
 
-def get_from_multiplechoice(options, message_when_failing):
-    """Show the options and let the user choose"""
-    if len(options) is 0:
-        print yellow(message_when_failing)
-        abort()
-    if len(options) is 1:
-        # check how certain we are
-        if options[0]['similarity'] > 0.9:
-            return options[0]['dirname']
-        # no good enough match found, show the failing message
-        print ""  # create some space
-        print yellow(message_when_failing)
-        print "Is the following name correct?"
-        print_options(options)
-        answer = raw_input("Y/n/a: ")
-        if answer == "" or answer.lower() == "y":
-            print magenta("Option " + options[0]['dirname'] + " chosen")
-            return options[0]['dirname']
-        if answer.lower() == "n" or answer.lower() == "a":
-            abort()
-        # no option chosen, lets retry
-        print red("No valid answer given")
-        return get_from_multiplechoice(options, message_when_failing)
+def search_through_all_files():
+    """Search through the list of files for a song directly"""
+    print 'search here!'
+    abort()
 
-    # multiple possible options, display the message and give the options
+
+def retry_manual_input():
+    """Retry a search with manual input"""
+    print blue("Retrying with manual input")
+    answer = raw_input("New name to search for: ")
+
+    if answer == '':
+        print red('Please give an input')
+        return retry_manual_input()
+
+    print "Retrying search..."
+    return ['Manual', answer]
+
+
+def get_from_onechoice(options, message_when_failing):
+    """Ask when we only have one options"""
+    # check how certain we are
+    if options[0]['similarity'] > 0.9:
+        return [True, options[0]['dirname']]
+    # no good enough match found, show the failing message
+    print ""  # create some space
+    print yellow(message_when_failing)
+    print "Is the following name correct?"
+    print_options(options)
+    answer = raw_input("Y/n/a/s/l: ")
+    if answer == "" or answer.lower() == "y":
+        print magenta("Option " + options[0]['dirname'] + " chosen")
+        return [True, options[0]['dirname']]
+    if answer.lower() == "l":
+        # search through all filenames
+        return search_through_all_files()
+    if answer.lower() == "s":
+        # manual input
+        return retry_manual_input()
+    if answer.lower() == "n" or answer.lower() == "a":
+        abort()
+    # no option chosen, lets retry
+    print red("No valid answer given")
+    return get_from_onechoice(options, message_when_failing)
+
+
+def get_from_multiplechoice(options, message_when_failing):
+    """display the message and give the options"""
     print ""  # create some space
     print yellow(message_when_failing)
     print "Choose one of the following:"
@@ -127,36 +150,68 @@ def get_from_multiplechoice(options, message_when_failing):
         answer = int(answer)
         if len(options) > answer-1:
             print magenta("Option " + options[0]['dirname'] + " chosen")
-            return options[0]['dirname']
+            return [True, options[0]['dirname']]
         else:
             print 'Answer out of bounds'
             return get_from_multiplechoice(options, message_when_failing)
 
 
-def get_artist_dir(artist, artists, artist_dirs):
+def get_from_question(options, message_when_failing):
+    """Show the options and let the user choose"""
+    if len(options) is 0:
+        print red(message_when_failing)
+        answer = raw_input("Choose option (S/l/a): ")
+        if answer.lower() == "a":
+            abort()
+        elif answer.lower() == "s" or answer == '':
+            return retry_manual_input()
+        elif answer.lower() == "l":
+            return search_through_all_files()
+    if len(options) is 1:
+        return get_from_onechoice(options, message_when_failing)
+
+    # multiple possible options
+    return get_from_multiplechoice(options, message_when_failing)
+
+
+def get_artist_dir(search_string, artists, artist_dirs, song):
     """Get the name of the directory of the artist"""
+    artist = song['artist']
     options = []
     if artist not in artists:
         for dirname in artist_dirs:
-            similarity = similar(artist, dirname)
-            if artist == dirname:
+            similarity = similar(search_string, dirname)
+            if search_string == dirname:
                 artists[artist] = dirname
                 return artists
 
-            similarity = similar(artist, dirname)
+            similarity = similar(search_string, dirname)
             if similarity > 0.5:
                 options.append({'dirname': dirname, 'similarity': similarity})
     else:
         return artists
     message = 'Artist: ' + artist + ' no exact match found!'
-    artists[artist] = get_from_multiplechoice(options, message)
+    if search_string != artist:
+        message += "\n"+'Searched for ' + search_string
+
+    result = get_from_question(options, message)
+
+    # check if found
+    if result[0] is True:
+        artists[artist] = result[1]
+    elif result[0] is 'Manual':
+        return get_artist_dir(result[1], artists, artist_dirs, song)
+
     return artists
 
 
-def get_album_dir(album, artist, albums, location):
+def get_album_dir(search_string, albums, song, location):
     """Get the name of the directory of the album"""
+
+    artist = song['album']
+    album = song['album']
+
     options = []
-    location = location + "/" + artist
 
     if artist not in albums:
         albums[artist] = {}
@@ -164,24 +219,37 @@ def get_album_dir(album, artist, albums, location):
     album_dirs = next(os.walk(location))[1]
     if artist not in albums or album not in albums[artist]:
         for dirname in album_dirs:
-            if album == dirname:
+            if search_string == dirname:
                 albums[artist][album] = dirname
                 return albums
-            similarity = similar(album, dirname)
+            similarity = similar(search_string, dirname)
             if similarity > 0.5:
                 options.append({'dirname': dirname, 'similarity': similarity})
     else:
         return albums
     message = 'Album: ' + album + ' - ' + artist + " no exact match found!\n"
     message += 'Searched in: ' + location
+    if search_string != album:
+        message += "\n"+'Searched for ' + search_string
 
-    albums[artist][album] = get_from_multiplechoice(options, message)
-    return albums
+    print artist
+
+    result = get_from_question(options, message)
+    # check if found
+    if result[0] is True:
+        albums[artist][album] = result[1]
+        return albums
+    elif result[0] is 'Manual':
+        return get_album_dir(result[1], albums, song, location)
 
 
-def get_song_path(song, artist, album, location):
+def get_song_path(search_string, song, location):
     """Get the location of the song"""
-    location = location + "/" + artist + "/" + album + "/"
+
+    artist = song['album']
+    album = song['album']
+    song_name = song['name']
+
     song_files = glob_extentions(location, "*.m4a", "*.mp3")
     regex = re.compile(ur'\d{1,3} ')
     options = []
@@ -192,17 +260,25 @@ def get_song_path(song, artist, album, location):
         filename = re.sub(regex, "", filename)
         filename_to_path[filename] = path
 
-        if song == filename:
+        if search_string == filename:
             return path
 
-        similarity = similar(song, filename)
+        similarity = similar(search_string, filename)
         if similarity > 0.4:
             options.append({'dirname': filename, 'similarity': similarity})
-    message = 'Song: ' + song + ' - ' + album + ' - ' + artist
+    message = 'Song: ' + song_name + ' - ' + album + ' - ' + artist
     message += " no exact match found!\n"
     message += 'Searched in: ' + location
-    filename = get_from_multiplechoice(options, message)
-    return filename_to_path[filename]
+    if search_string != song_name:
+        message += "\n"+'Searched for ' + search_string
+
+    filename = get_from_question(options, message)
+    result = get_from_question(options, message)
+    # check if found
+    if result[0] is True:
+        return result[1]
+    elif result[0] is 'Manual':
+        return get_song_path(result[1], song, location)
 
 
 def process_content(content, library):
@@ -236,15 +312,17 @@ def process_content(content, library):
     artist_dirs = next(os.walk(library))[1]
 
     for song in songs:
-        artists = get_artist_dir(song['artist'], artists, artist_dirs)
+        artists = get_artist_dir(song['artist'], artists, artist_dirs, song)
         artist_dir = artists[song['artist']]
 
         # we found the artist folder, now lets look for the album
-        albums = get_album_dir(song['album'], artist_dir, albums, library)
+        location = library + '/' + artist_dir
+        albums = get_album_dir(song['album'], albums, song, location)
         album_dir = albums[artist_dir][song['album']]
 
         # we found the album folder, now lets look for the song
-        song_path = get_song_path(song['name'], artist_dir, album_dir, library)
+        location = location + "/" + artist_dir + "/" + album_dir + "/"
+        song_path = get_song_path(song['name'], song, location)
 
         # ok, now do the output, start with the info
         output += "#EXTINF:" + song['duration'] + ","
@@ -273,6 +351,53 @@ def create_playlist(input_filename, output_filename, library):
     return 1
 
 
+def check_options(opts):
+    """check all options"""
+    output_filename = None
+    input_filename = None
+    library = None
+    for opt, val in opts:
+        if opt in ("-h", "--help"):
+            usage()
+            sys.exit(0)
+        elif opt in ("-i", "--input"):
+            input_filename = val
+        elif opt in ("-o", "--output"):
+            output_filename = val
+        elif opt in ("-l", "--library"):
+            library = os.path.normpath(val)
+        else:
+            assert False, "unhandled option"
+
+    if input_filename is None or library is None:
+        print "Missing argument"
+        usage()
+        sys.exit(2)
+
+    if not os.path.isfile(input_filename):
+        print "input file is not found"
+        usage()
+        sys.exit(3)
+
+    if not os.path.isdir(library):
+        print "library is not found"
+        usage()
+        sys.exit(4)
+
+    if output_filename is None:
+        root = os.path.basename(input_filename)
+        output_filename = root + '.m3u'
+
+    if os.path.isfile(output_filename):
+        print 'File', '"'+output_filename+'"', 'exists, overwrite?'
+        answer = raw_input("Y/n ")
+        if answer != '' and answer.lower() != 'y':
+            print 'Aborting!'
+            sys.exit(5)
+
+    return (input_filename, output_filename, library)
+
+
 def main(argv=None):
     """the main function that handles the arguments"""
     if argv is None:
@@ -291,47 +416,7 @@ def main(argv=None):
         usage()
         return 2
 
-    output_filename = None
-    input_filename = None
-    library = None
-    for opt, val in opts:
-        if opt in ("-h", "--help"):
-            usage()
-            return 1
-        elif opt in ("-i", "--input"):
-            input_filename = val
-        elif opt in ("-o", "--output"):
-            output_filename = val
-        elif opt in ("-l", "--library"):
-            library = os.path.normpath(val)
-        else:
-            assert False, "unhandled option"
-
-    if input_filename is None or library is None:
-        print "Missing argument"
-        usage()
-        return 2
-
-    if not os.path.isfile(input_filename):
-        print "input file is not found"
-        usage()
-        return 3
-
-    if not os.path.isdir(library):
-        print "library is not found"
-        usage()
-        return 3
-
-    if output_filename is None:
-        root = os.path.basename(input_filename)
-        output_filename = root + '.m3u'
-
-    if os.path.isfile(output_filename):
-        print 'File', '"'+output_filename+'"', 'exists, overwrite?'
-        answer = raw_input("Y/n ")
-        if answer != '' and answer.lower() != 'y':
-            print 'Aborting!'
-            return 0
+    (input_filename, output_filename, library) = check_options(opts)
 
     return create_playlist(input_filename, output_filename, library)
 
