@@ -70,7 +70,7 @@ def similar(wanted, to_check):
     return SequenceMatcher(None, wanted, to_check).ratio()
 
 
-def print_options(options, add_abort=False):
+def print_options(options, add_abort=False, add_manual=True):
     """Print an option and its similarity"""
     for index, option in enumerate(options):
         if len(options) is 1:
@@ -81,12 +81,29 @@ def print_options(options, add_abort=False):
         print index_string, option['dirname'], similarity_string
     if add_abort:
         print "A) Abort"
+    if add_manual:
+        print "M) Manually input the path"
 
 
-def search_through_all_files():
+def input_path(song=False):
     """Search through the list of files for a song directly"""
-    print 'search here!'
-    abort()
+    search_for = 'directory'
+    if song:
+        search_for = 'songfile'
+
+    answer = raw_input("Input manual path to "+search_for+": ")
+
+    # check if path exists
+    if song:
+        if not os.path.isfile(answer):
+            print red('file does not exist!')
+            return input_path()
+    else:
+        answer = os.path.normpath(answer)
+        if not os.path.isdir(answer):
+            print red('path does not exist!')
+            return input_path()
+    return ['PathInput', answer]
 
 
 def retry_manual_input():
@@ -102,7 +119,7 @@ def retry_manual_input():
     return ['Manual', answer]
 
 
-def get_from_onechoice(options, message_when_failing):
+def get_from_onechoice(options, message_when_failing, song=False):
     """Ask when we only have one options"""
     # check how certain we are
     if options[0]['similarity'] > 0.9:
@@ -111,41 +128,43 @@ def get_from_onechoice(options, message_when_failing):
     print ""  # create some space
     print yellow(message_when_failing)
     print "Is the following name correct?"
-    print_options(options)
-    answer = raw_input("Y/n/a/s/l: ")
+    print_options(options, False, False)
+    answer = raw_input("Y/n/a/s/m: ")
     if answer == "" or answer.lower() == "y":
         print magenta("Option " + options[0]['dirname'] + " chosen")
         return [True, options[0]['dirname']]
-    if answer.lower() == "l":
+    elif answer.lower() == "m":
         # search through all filenames
-        return search_through_all_files()
-    if answer.lower() == "s":
+        return input_path(song)
+    elif answer.lower() == "s":
         # manual input
         return retry_manual_input()
-    if answer.lower() == "n" or answer.lower() == "a":
+    elif answer.lower() == "n" or answer.lower() == "a":
         abort()
     # no option chosen, lets retry
     print red("No valid answer given")
     return get_from_onechoice(options, message_when_failing)
 
 
-def get_from_multiplechoice(options, message_when_failing):
+def get_from_multiplechoice(options, message_when_failing, song):
     """display the message and give the options"""
     print ""  # create some space
     print yellow(message_when_failing)
     print "Choose one of the following:"
     # sort the options
     options = sorted(options, key=lambda k: k['similarity'], reverse=True)
-    print_options(options, True)
+    print_options(options, True, True)
     answer = raw_input("Enter a number or press enter for the default (1): ")
     if answer.lower() == "a":
         abort()
+    elif answer.lower() == "m":
+        return input_path(song)
     else:
         if not answer:
             answer = 1  # the default
         if not str(answer).isdigit():
             print red("Answer not recognized")
-            return get_from_multiplechoice(options, message_when_failing)
+            return get_from_multiplechoice(options, message_when_failing, song)
 
         answer = int(answer)
         if len(options) > answer-1:
@@ -153,10 +172,10 @@ def get_from_multiplechoice(options, message_when_failing):
             return [True, options[0]['dirname']]
         else:
             print 'Answer out of bounds'
-            return get_from_multiplechoice(options, message_when_failing)
+            return get_from_multiplechoice(options, message_when_failing, song)
 
 
-def get_from_question(options, message_when_failing):
+def get_from_question(options, message_when_failing, song=False):
     """Show the options and let the user choose"""
     if len(options) is 0:
         print red(message_when_failing)
@@ -166,15 +185,15 @@ def get_from_question(options, message_when_failing):
         elif answer.lower() == "s" or answer == '':
             return retry_manual_input()
         elif answer.lower() == "l":
-            return search_through_all_files()
+            return input_path(song)
     if len(options) is 1:
-        return get_from_onechoice(options, message_when_failing)
+        return get_from_onechoice(options, message_when_failing, song)
 
     # multiple possible options
-    return get_from_multiplechoice(options, message_when_failing)
+    return get_from_multiplechoice(options, message_when_failing, song)
 
 
-def get_artist_dir(search_string, artists, artist_dirs, song):
+def get_artist_dir(search_string, artists, artist_dirs, song, library):
     """Get the name of the directory of the artist"""
     artist = song['artist']
     options = []
@@ -182,7 +201,7 @@ def get_artist_dir(search_string, artists, artist_dirs, song):
         for dirname in artist_dirs:
             similarity = similar(search_string, dirname)
             if search_string == dirname:
-                artists[artist] = dirname
+                artists[artist] = library + '/' + dirname
                 return artists
 
             similarity = similar(search_string, dirname)
@@ -194,14 +213,18 @@ def get_artist_dir(search_string, artists, artist_dirs, song):
     if search_string != artist:
         message += "\n"+'Searched for ' + search_string
 
-    result = get_from_question(options, message)
+    result = get_from_question(options, message, False)
 
     # check if found
     if result[0] is True:
+        artists[artist] = library + '/' + result[1]
+    elif result[0] is 'PathInput':
         artists[artist] = result[1]
     elif result[0] is 'Manual':
-        return get_artist_dir(result[1], artists, artist_dirs, song)
+        # retry
+        return get_artist_dir(result[1], artists, artist_dirs, song, library)
 
+    # return the answer
     return artists
 
 
@@ -220,7 +243,7 @@ def get_album_dir(search_string, albums, song, location):
     if artist not in albums or album not in albums[artist]:
         for dirname in album_dirs:
             if search_string == dirname:
-                albums[artist][album] = dirname
+                albums[artist][album] = location + '/' + dirname
                 return albums
             similarity = similar(search_string, dirname)
             if similarity > 0.5:
@@ -232,13 +255,17 @@ def get_album_dir(search_string, albums, song, location):
     if search_string != album:
         message += "\n"+'Searched for ' + search_string
 
-    result = get_from_question(options, message)
+    result = get_from_question(options, message, False)
     # check if found
     if result[0] is True:
+        albums[artist][album] = location + '/' + result[1]
+    elif result[0] is 'PathInput':
         albums[artist][album] = result[1]
-        return albums
     elif result[0] is 'Manual':
+        # retry
         return get_album_dir(result[1], albums, song, location)
+
+    return albums
 
 
 def get_song_path(search_string, song, location):
@@ -247,6 +274,8 @@ def get_song_path(search_string, song, location):
     artist = song['album']
     album = song['album']
     song_name = song['name']
+
+    location = os.path.normpath(location) + '/'
 
     song_files = glob_extentions(location, "*.m4a", "*.mp3")
     regex = re.compile(ur'\d{1,3} ')
@@ -270,9 +299,11 @@ def get_song_path(search_string, song, location):
     if search_string != song_name:
         message += "\n"+'Searched for ' + search_string
 
-    result = get_from_question(options, message)
+    result = get_from_question(options, message, True)
     # check if found
     if result[0] is True:
+        return result[1]
+    elif result[0] is 'PathInput':
         return result[1]
     elif result[0] is 'Manual':
         return get_song_path(result[1], song, location)
@@ -309,19 +340,16 @@ def process_content(content, library):
     artist_dirs = next(os.walk(library))[1]
 
     for song in songs:
-        print song
-        artists = get_artist_dir(song['artist'], artists, artist_dirs, song)
-        artist_dir = artists[song['artist']]
+        artist = song['artist']  # just so the next line is short enough
+        artists = get_artist_dir(artist, artists, artist_dirs, song, library)
+        location = artists[song['artist']]
 
         # we found the artist folder, now lets look for the album
-        location = library + '/' + artist_dir
         albums = get_album_dir(song['album'], albums, song, location)
-        album_dir = albums[song['artist']][song['album']]
+        location = albums[song['artist']][song['album']]
 
         # we found the album folder, now lets look for the song
-        location = location + "/" + album_dir + "/"
         song_path = get_song_path(song['name'], song, location)
-        print song_path
 
         # ok, now do the output, start with the info
         output += "#EXTINF:" + song['duration'] + ","
